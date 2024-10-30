@@ -90,8 +90,6 @@ let inventario = {
 
 let productosSeleccionados = [];
 let productoSeleccionado = null;
-let contadorFacturas = parseInt(localStorage.getItem('contadorFacturas')) || 0;
-
 document.querySelectorAll('.producto').forEach(item => {
     item.addEventListener('click', event => {
         const nombre = event.target.getAttribute('data-nombre');
@@ -121,18 +119,21 @@ function agregarProducto(cantidad) {
     mostrarTicket();
 }
 
+
+// Parte 3
 function mostrarTicket() {
     const ticketBody = document.getElementById('ticketBody');
     ticketBody.innerHTML = '';
     let totalFactura = 0;
 
-    productosSeleccionados.forEach(producto => {
+    productosSeleccionados.forEach((producto, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${producto.nombre}</td>
-            <td>${producto.cantidad}</td>
+            <td><input type="number" value="${producto.cantidad}" onchange="modificarCantidad(${index}, this.value)"></td>
             <td>$${formatPrice(producto.precio)}</td>
             <td>$${formatPrice(producto.cantidad * producto.precio)}</td>
+            <td><button onclick="eliminarProducto(${index})">Eliminar</button></td>
         `;
         ticketBody.appendChild(row);
         totalFactura += producto.cantidad * producto.precio;
@@ -140,13 +141,29 @@ function mostrarTicket() {
 
     document.getElementById('totalFactura').textContent = formatPrice(totalFactura);
 }
+// Parte 4
+function modificarCantidad(index, nuevaCantidad) {
+    if (!isNaN(nuevaCantidad) && nuevaCantidad > 0) {
+        productosSeleccionados[index].cantidad = parseInt(nuevaCantidad, 10);
+        mostrarTicket();
+    } else {
+        alert('Cantidad no válida.');
+    }
+}
+
+function eliminarProducto(index) {
+    productosSeleccionados.splice(index, 1);
+    mostrarTicket();
+}
+
 
 function formatPrice(price) {
     return price.toLocaleString('es-CO');
 }
 
 function generarTicketPDF() {
-    contadorFacturas++;
+    const clienteInput = document.getElementById('cliente').value;
+    const fecha = new Date().toLocaleDateString();
     const { jsPDF } = window.jspdf;
     const ticketHeight = 100 + (productosSeleccionados.length * 10);
     const doc = new jsPDF('p', 'mm', [85, ticketHeight]);
@@ -154,10 +171,14 @@ function generarTicketPDF() {
     let y = 10;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Ticket de Facturación (N° ${contadorFacturas})`, 42.5, y, { align: 'center' });
+    doc.text(`Ticket`, 42.5, y, { align: 'center' });
     y += 10;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
+    doc.text(`Cliente: ${clienteInput}`, 1, y);
+    y += 5;
+    doc.text(`Fecha: ${fecha}`, 1, y);
+    y += 5;
     doc.text('Producto', 1, y);
     doc.text('Cantidad', 30, y);
     doc.text('Precio', 50, y);
@@ -184,11 +205,15 @@ function generarTicketPDF() {
     doc.setFont('helvetica', 'bold');
     doc.text(`Total de la Factura: $${formatPrice(totalFactura)}`, 10, y + 10);
     doc.setFont('helvetica', 'normal');
-
-    doc.save(`ticket_factura_${contadorFacturas}.pdf`);
+    doc.save(`ticket_factura_${fecha}.pdf`);
 
     resetFormulario();
 }
+
+
+
+
+
 
 function resetFormulario() {
     productosSeleccionados = [];
